@@ -11,23 +11,16 @@ MOVE_DELAY = 0.03
 ROT_DELAY = 0.05
 FINAL_DELAY = 0.08
 
-# estado interno para evitar repetir jugadas
-ultima_jugada = None
 
-
-def ejecutar_movimiento(col_objetivo, rotaciones):
-    global ultima_jugada
-    jugada_actual = (col_objetivo, rotaciones)
-    if jugada_actual == ultima_jugada:
-        return
-    ultima_jugada = jugada_actual
-
+def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3):
+    # Primero rotar — esto cambia la posición de la pieza en el juego
     for _ in range(rotaciones):
         pyautogui.press(ROTATE)
         time.sleep(ROT_DELAY)
 
-    columna_actual = 4
-    desplazamiento = col_objetivo - columna_actual
+    # spawn_col indica dónde está la pieza DESPUÉS de rotar
+    # (ej: I vertical está en col 5, no en col 3)
+    desplazamiento = col_objetivo - spawn_col
     tecla = RIGHT if desplazamiento > 0 else LEFT
 
     for _ in range(abs(desplazamiento)):

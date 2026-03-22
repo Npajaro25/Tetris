@@ -29,4 +29,11 @@ class Agente:
 
         valor, col, rot, _ = self.ia.get_best_choice(pieza)
 
-        return col, rot
+        # IMPORTANTE: obtener posición de spawn DESPUÉS de la rotación elegida,
+        # porque rotar cambia la posición de la pieza (ej: I vertical se mueve de col 3 a col 5)
+        pieza.set_current_shape(rot)
+        spawn_col = pieza.grid_position
+
+        print(f"  → target_col={col}, rot={rot}, spawn_col={spawn_col}, desplazamiento={col - spawn_col}")
+
+        return col, rot, spawn_col

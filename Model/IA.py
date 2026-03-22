@@ -23,6 +23,13 @@ class Tetris_IA:
                 best_value = valor
                 best_col = col
                 best_indices = indices
+            elif valor == best_value:
+                # Desempate: preferir columna más cercana al centro (col 4-5)
+                dist_actual = abs(best_col - 4.5)
+                dist_nueva = abs(col - 4.5)
+                if dist_nueva < dist_actual:
+                    best_col = col
+                    best_indices = indices
 
         return best_value, best_col, best_indices
 
