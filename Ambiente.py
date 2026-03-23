@@ -4,97 +4,114 @@ import mss
 import time
 import sys
 
+
 class Ambiente:
     def __init__(self):
         self.sct = mss.mss()
-        self.monitor = self.seleccionar_region()
-
-    def seleccionar_region(self):
         print(" Tienes 5 segundos para prepararte y enfocar la ventana del juego...")
         time.sleep(5)
         screen = np.array(self.sct.grab(self.sct.monitors[1]))
-        roi = cv2.selectROI("Selecciona el tablero", screen)
+        roi = cv2.selectROI("Selecciona la GRILLA del Tetris (10x20)", screen)
         cv2.destroyAllWindows()
-
         x, y, w, h = roi
         if w <= 0 or h <= 0:
             print("Error: Region invalida.")
             sys.exit(1)
-
-        return {
-            "top": int(y),
-            "left": int(x),
-            "width": int(w),
-            "height": int(h)
-        }
+        self.monitor = {"top": int(y), "left": int(x), "width": int(w), "height": int(h)}
+        self.ultima_pieza = "T"
 
     def capturar(self):
         img = np.array(self.sct.grab(self.monitor))
         img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
         return img
 
-    def _detectar_tablero_raw(self, img):
-        """Detecta celdas ocupadas sin filtrar pieza cayendo."""
+    def _detectar_pieza_por_color(self, img):
+        """Detecta la pieza actual analizando el color (Hue) de los píxeles
+        brillantes en la zona de spawn (filas 0-5)."""
+        h_img, w_img, _ = img.shape
+        filas = 20
+        ys = np.linspace(0, h_img, filas + 1, dtype=int)
+        # Zona de spawn: filas 0-5
+        spawn = img[ys[0]:ys[6], :, :]
+        hsv = cv2.cvtColor(spawn, cv2.COLOR_BGR2HSV)
+
+        # Buscar píxeles con color vivo (S>80, V>80)
+        mask = (hsv[:, :, 1] > 80) & (hsv[:, :, 2] > 80)
+        n_pixels = np.sum(mask)
+
+        if n_pixels < 10:
+            return self.ultima_pieza  # Fallback
+
+        hues = hsv[:, :, 0][mask]
+        h_median = float(np.median(hues))
+
+        # Mapeo de Hue a pieza
+        if h_median < 10 or h_median > 170:
+            pieza = "Z"   # Rojo
+        elif h_median < 22:
+            pieza = "L"   # Naranja
+        elif h_median < 38:
+            pieza = "O"   # Amarillo
+        elif h_median < 80:
+            pieza = "S"   # Verde
+        elif h_median < 105:
+            pieza = "I"   # Cian
+        elif h_median < 135:
+            pieza = "J"   # Azul
+        else:
+            pieza = "T"   # Púrpura
+
+        self.ultima_pieza = pieza
+        return pieza
+
+    def _detectar_tablero(self, img):
+        """Detecta celdas ocupadas del tablero.
+        Usa percentil 75 del Value para ignorar líneas de grilla.
+        Usa linspace para que la última columna incluya todos los píxeles."""
         filas, columnas = 20, 10
         h, w, _ = img.shape
 
-        # Recortar 3% de cada borde para excluir bordes del ROI
-        margin_top = int(h * 0.03)
-        margin_bot = int(h * 0.03)
-        margin_left = int(w * 0.03)
-        margin_right = int(w * 0.03)
-        img = img[margin_top:h - margin_bot, margin_left:w - margin_right]
-        h, w, _ = img.shape
-
-        celda_h = h // filas
-        celda_w = w // columnas
+        ys = np.linspace(0, h, filas + 1, dtype=int)
+        xs = np.linspace(0, w, columnas + 1, dtype=int)
 
         tablero = np.zeros((filas, columnas), dtype=int)
         hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
         for i in range(filas):
             for j in range(columnas):
-                y1 = i * celda_h
-                y2 = (i + 1) * celda_h
-                x1 = j * celda_w
-                x2 = (j + 1) * celda_w
+                y1, y2 = ys[i], ys[i + 1]
+                x1, x2 = xs[j], xs[j + 1]
 
                 celda = hsv[y1:y2, x1:x2]
+                ch, cw = celda.shape[:2]
 
-                # Usar centro de la celda (evitar bordes de cuadrícula)
-                margin_y = celda_h // 4
-                margin_x = celda_w // 4
-                if margin_y > 0 and margin_x > 0:
-                    celda = celda[margin_y:-margin_y, margin_x:-margin_x]
+                # Margen fijo de 1px para evitar líneas de grilla
+                # (porcentaje era demasiado agresivo en columnas de borde)
+                mx = min(1, max(0, cw // 6))
+                my = min(1, max(0, ch // 6))
+                if my > 0 and mx > 0:
+                    centro = celda[my:-my, mx:-mx]
+                else:
+                    centro = celda
 
-                s_mean = np.mean(celda[:, :, 1])
-                v_mean = np.mean(celda[:, :, 2])
+                v_channel = centro[:, :, 2].flatten()
+                v_p75 = float(np.percentile(v_channel, 75))
 
-                if s_mean > 70 and v_mean > 70:
+                if v_p75 > 80:
                     tablero[i][j] = 1
+
+        # Limpiar zona de spawn + countdown (filas 0-6)
+        tablero[0:6, :] = 0
 
         return tablero
 
     def obtener_estado(self):
-        """Lee el tablero DOS VECES para separar bloques colocados de la pieza cayendo.
-        Los bloques colocados NO se mueven entre lecturas -> se mantienen.
-        La pieza cayendo SÍ se mueve -> se filtra."""
+        """Retorna (tablero, pieza_actual)."""
+        img = self.capturar()
+        pieza = self._detectar_pieza_por_color(img)
+        tablero = self._detectar_tablero(img)
 
-        tablero1 = self._detectar_tablero_raw(self.capturar())
-        time.sleep(0.15)
-        tablero2 = self._detectar_tablero_raw(self.capturar())
-
-        # Solo mantener celdas que son 1 en AMBAS lecturas (bloques estáticos)
-        tablero = np.where((tablero1 == 1) & (tablero2 == 1), 1, 0)
-
-        # Ignorar zona de spawn (top 4 filas)
-        tablero[0:4, :] = 0
-
-        # La detección de pieza por color es demasiado frágil para TETR.IO.
-        # Usamos T como pieza por defecto — es la más versátil (3 ancho, 4 rotaciones).
-        pieza = "T"
-
-        print("Pieza:", pieza)
+        print(f"Pieza: {pieza}")
         print(tablero)
 
         return tablero, pieza
