@@ -80,12 +80,12 @@ class Grid:
         huecos = self.get_holes(new_grid)
         bumpiness = self.get_bumpiness_from_heights(heights)
 
-        # Pesos que lograron 9,478 puntos (probados experimentalmente)
+        # Pesos El-Tetris (probados, fiables — no cambiar)
         heuristicas = [
-            -0.300000 * altura_agg,
-            +3.000000 * lineas,
-            -1.200000 * huecos,
-            -0.300000 * bumpiness,
+            -0.510066 * altura_agg,
+            +0.760666 * lineas,
+            -0.356630 * huecos,
+            -0.184483 * bumpiness,
         ]
 
         return heuristicas, None

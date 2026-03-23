@@ -106,10 +106,21 @@ class Ambiente:
         return tablero
 
     def obtener_estado(self):
-        """Retorna (tablero, pieza_actual)."""
-        img = self.capturar()
-        pieza = self._detectar_pieza_por_color(img)
-        tablero = self._detectar_tablero(img)
+        """Retorna (tablero, pieza_actual).
+        Doble lectura: captura 2 veces con 150ms de separación.
+        Los bloques fijos NO se mueven → se mantienen en ambas lecturas.
+        La pieza cayendo SÍ se mueve → desaparece con el AND."""
+        img1 = self.capturar()
+        pieza = self._detectar_pieza_por_color(img1)
+        tablero1 = self._detectar_tablero(img1)
+
+        time.sleep(0.15)
+
+        img2 = self.capturar()
+        tablero2 = self._detectar_tablero(img2)
+
+        # AND lógico: solo quedan las celdas que están en AMBAS lecturas
+        tablero = tablero1 & tablero2
 
         print(f"Pieza: {pieza}")
         print(tablero)
