@@ -6,10 +6,13 @@ RIGHT = 'right'
 ROTATE = 'up'
 DROP = 'space'
 
-# Delays RÁPIDOS para Blitz (120s) — cada ms cuenta
-MOVE_DELAY = 0.04   # 40ms entre movimientos laterales
-ROT_DELAY = 0.05    # 50ms entre rotaciones
-FINAL_DELAY = 0.05  # 50ms pausa antes del hard drop
+# CRÍTICO: pyautogui agrega PAUSE=0.1s a CADA tecla por defecto
+pyautogui.PAUSE = 0
+
+# Delays ultra-rápidos para Blitz (25ms probado estable)
+MOVE_DELAY = 0.025   # 25ms entre movimientos laterales
+ROT_DELAY = 0.030    # 30ms entre rotaciones
+FINAL_DELAY = 0.025  # 25ms pausa antes del hard drop
 
 
 def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3):

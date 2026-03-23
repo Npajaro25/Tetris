@@ -8,8 +8,8 @@ import sys
 class Ambiente:
     def __init__(self):
         self.sct = mss.mss()
-        print(" Tienes 5 segundos para prepararte y enfocar la ventana del juego...")
-        time.sleep(5)
+        print(" Tienes 3 segundos para enfocar TETR.IO...")
+        time.sleep(3)
         screen = np.array(self.sct.grab(self.sct.monitors[1]))
         roi = cv2.selectROI("Selecciona la GRILLA del Tetris (10x20)", screen)
         cv2.destroyAllWindows()
@@ -35,9 +35,9 @@ class Ambiente:
         spawn = img[ys[0]:ys[6], :, :]
         hsv = cv2.cvtColor(spawn, cv2.COLOR_BGR2HSV)
 
-        # Buscar píxeles con color vivo (S>80, V>80)
-        mask = (hsv[:, :, 1] > 80) & (hsv[:, :, 2] > 80)
-        n_pixels = np.sum(mask)
+        # Umbrales para captar piezas reales sin incluir glow de fondo
+        mask = (hsv[:, :, 1] > 100) & (hsv[:, :, 2] > 100)
+        n_pixels = int(np.sum(mask))
 
         if n_pixels < 10:
             return self.ultima_pieza  # Fallback
@@ -52,7 +52,7 @@ class Ambiente:
             pieza = "L"   # Naranja
         elif h_median < 38:
             pieza = "O"   # Amarillo
-        elif h_median < 80:
+        elif h_median < 75:
             pieza = "S"   # Verde
         elif h_median < 105:
             pieza = "I"   # Cian
@@ -85,12 +85,15 @@ class Ambiente:
                 celda = hsv[y1:y2, x1:x2]
                 ch, cw = celda.shape[:2]
 
-                # Margen fijo de 1px para evitar líneas de grilla
-                # (porcentaje era demasiado agresivo en columnas de borde)
-                mx = min(1, max(0, cw // 6))
-                my = min(1, max(0, ch // 6))
-                if my > 0 and mx > 0:
-                    centro = celda[my:-my, mx:-mx]
+                # Margen para evitar bordes de grilla del TETR.IO
+                # Columnas 0 y 9 necesitan más margen (capturan borde de ventana)
+                margin_y = ch // 4
+                if j == 0 or j == 9:
+                    margin_x = cw // 3  # Más agresivo en bordes
+                else:
+                    margin_x = cw // 4
+                if margin_y > 0 and margin_x > 0:
+                    centro = celda[margin_y:-margin_y, margin_x:-margin_x]
                 else:
                     centro = celda
 
@@ -100,29 +103,28 @@ class Ambiente:
                 if v_p75 > 80:
                     tablero[i][j] = 1
 
-        # Limpiar zona de spawn + countdown (filas 0-6)
-        tablero[0:6, :] = 0
+        # Limpiar solo filas 0-1 (spawn inmediato, pieza recién aparece)
+        tablero[0:2, :] = 0
 
         return tablero
 
     def obtener_estado(self):
         """Retorna (tablero, pieza_actual).
-        Doble lectura: captura 2 veces con 150ms de separación.
-        Los bloques fijos NO se mueven → se mantienen en ambas lecturas.
-        La pieza cayendo SÍ se mueve → desaparece con el AND."""
+        Doble lectura con 150ms de separación.
+        - Pieza: color de spawn zone en img1
+        - Tablero: AND de ambas lecturas (elimina pieza cayendo)"""
         img1 = self.capturar()
         pieza = self._detectar_pieza_por_color(img1)
         tablero1 = self._detectar_tablero(img1)
 
-        time.sleep(0.15)
+        time.sleep(0.12)
 
         img2 = self.capturar()
         tablero2 = self._detectar_tablero(img2)
 
-        # AND lógico: solo quedan las celdas que están en AMBAS lecturas
+        # AND lógico: solo quedan las celdas fijas
         tablero = tablero1 & tablero2
 
         print(f"Pieza: {pieza}")
-        print(tablero)
 
         return tablero, pieza

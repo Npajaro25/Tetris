@@ -34,7 +34,6 @@ class Agente:
         pieza.set_current_shape(rot)
         spawn_col = pieza.grid_position
 
-        print(f"Mejor jugada: ({valor}, {col}, {rot}, None)")
-        print(f"  → target_col={col}, rot={rot}, spawn_col={spawn_col}, desplazamiento={col - spawn_col}")
+        print(f"→ {pieza_str} col={col} rot={rot}")
 
         return col, rot, spawn_col

@@ -7,8 +7,8 @@ import numpy as np
 ambiente = Ambiente()
 agente = Agente()
 
-print("Iniciando en 3 segundos...")
-time.sleep(3)
+print("Iniciando en 2 segundos...")
+time.sleep(2)
 
 stale_count = 0
 MAX_STALE = 5
@@ -36,5 +36,5 @@ while True:
 
     ejecutar_movimiento(col, rot, spawn_col)
 
-    # Espera reducida para Blitz — cada ms cuenta
-    time.sleep(0.35)
+    # Espera mínima para que pieza asiente
+    time.sleep(0.20)
