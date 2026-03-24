@@ -28,18 +28,18 @@ while True:
 stale_count = 0
 MAX_STALE = 2            # 2 ciclos vacíos consecutivos = ~0.7 segundos = game over
 game_started = False
-# last_screenshot_time = time.time()
+start_time = None
 prev_pieza = None
 prev_next = None
 
 while True:
     tablero, pieza, next_pieza = ambiente.obtener_estado()
 
-    # Guarda una captura cada 10 segundos por solicitud de diagnostico visual
-    # current_time = time.time()
-    # if game_started and (current_time - last_screenshot_time > 10):
-    #     cv2.imwrite(os.path.join(os.getcwd(), f"debug_board_{int(current_time)}.png"), ambiente.capturar())
-    #     last_screenshot_time = current_time
+    # ========== TIME OVER ESTRICTO (120 Segundos) ========== #
+    if game_started:
+        if time.time() - start_time >= 122: # 120s de Blitz + 2s de gracia (animación inicial)
+            print("¡Tiempo límite de TETR.IO Blitz alcanzado! Deteniendo agente para ver puntuación.")
+            break
 
     # ========== DETECCIÓN DE TABLERO VACÍO ========== #
     board_empty = (np.sum(tablero) == 0)
@@ -59,7 +59,9 @@ while True:
             time.sleep(0.35)
             continue
     else:
-        game_started = True
+        if not game_started:
+            game_started = True
+            start_time = time.time()
         stale_count = 0  # Resetear: el tablero tiene bloques reales
 
     # Resetear Hold al inicio de cada nuevo turno (El agente decide si usar el slot)
