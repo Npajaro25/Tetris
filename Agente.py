@@ -105,7 +105,14 @@ class Agente:
 
                 # TRAP DEL HOLD: Si tenemos la 'I' en el HOLD, la encadenamos ahí.
                 # Solo la soltaremos si sacarla da un Tetris (score_hold masivo > 1000).
-                if self.hold_piece_str == "I" and score_hold < 1000:
+                # EXCEPCIÓN: Si el stack está en zona de pánico (≥14 filas), soltar la I
+                # aunque no haya Tetris perfecto — sobrevivir > optimizar.
+                max_height = 0
+                for r in range(20):
+                    if tablero[r].any():
+                        max_height = 20 - r
+                        break
+                if self.hold_piece_str == "I" and score_hold < 1000 and max_height < 14:
                     score_hold -= 10000
 
                 # Si forzamos guardar 'I', o si el score es legítimamente mejor:
