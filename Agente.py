@@ -85,12 +85,13 @@ class Agente:
         usar_hold = False
         best_col, best_rot, best_spawn = col_c, rot_c, spawn_c
 
-        # ========== LÓGICA DE HOLD OFENSIVO (GUARDAR LA 'I') ========== #
-        # Si la pieza es 'I' y NO podemos hacer un Tetris (el score de Tetris da +2000),
-        # queremos guardarla desesperadamente en el HOLD.
-        fuerza_hold_I = False
-        if pieza_str == "I" and score_current < 1000 and self.hold_piece_str != "I":
-            fuerza_hold_I = True
+        # ========== LÓGICA DE HOLD NATURAL CON PREFERENCIA DE 'I' ========== #
+        # Le damos un bono moderado (+500) a cualquier decisión que resulte en 
+        # tener la pieza 'I' en el slot de HOLD. Así la IA preferirá guardarla,
+        # pero la soltará si hacer un Tetris (+3000) o sobrevivir vale más la pena.
+        
+        bonus_I = 500
+        efectivo_current = score_current + (bonus_I if self.hold_piece_str == "I" else 0)
 
         if self.can_hold:
             if self.hold_piece_str is not None:
@@ -103,27 +104,17 @@ class Agente:
                     score_hold, col_h, rot_h, spawn_h = self._evaluar_pieza(
                         tablero, self.hold_piece_str)
 
-                # TRAP DEL HOLD: Si tenemos la 'I' en el HOLD, la encadenamos ahí.
-                # Solo la soltaremos si sacarla da un Tetris (score_hold masivo > 1000).
-                # EXCEPCIÓN: Si el stack está en zona de pánico (≥14 filas), soltar la I
-                # aunque no haya Tetris perfecto — sobrevivir > optimizar.
-                max_height = 0
-                for r in range(20):
-                    if tablero[r].any():
-                        max_height = 20 - r
-                        break
-                if self.hold_piece_str == "I" and score_hold < 1000 and max_height < 14:
-                    score_hold -= 10000
-
-                # Si forzamos guardar 'I', o si el score es legítimamente mejor:
-                if fuerza_hold_I or score_hold > score_current:
+                # Si el score efectivo del hold es legítimamente mejor:
+                efectivo_hold = score_hold + (bonus_I if pieza_str == "I" else 0)
+                
+                if efectivo_hold > efectivo_current:
                     usar_hold = True
                     best_col, best_rot, best_spawn = col_h, rot_h, spawn_h
                     pieza_que_sale = self.hold_piece_str
                     self.hold_piece_str = pieza_str
                     self.can_hold = False
-                    reason = "FORCED (Save I)" if fuerza_hold_I else "BETTER SCORE"
-                    print(f"  HOLD: guardó {pieza_str}, juega {pieza_que_sale} [{reason}]")
+                    reason = "BETTER SCORE"
+                    # print(f"  HOLD: guardó {pieza_str}, juega {pieza_que_sale} [{reason}]")
 
             else:
                 # Hold VACÍO: comparar Play Current vs Play Next (Hold Current)
@@ -137,17 +128,19 @@ class Agente:
                         score_next, col_n, rot_n, spawn_n = self._evaluar_pieza(
                             tablero, next_pieza_str)
 
-                    if fuerza_hold_I or score_next > score_current + 5:
+                    efectivo_next = score_next + (bonus_I if pieza_str == "I" else 0)
+                    
+                    if efectivo_next > efectivo_current + 5: # Ligeramente conservador para cambiar un hold vacío
                         usar_hold = True
                         best_col, best_rot, best_spawn = col_n, rot_n, spawn_n
                         self.hold_piece_str = pieza_str
                         self.can_hold = False
-                        reason = "FORCED (Save I)" if fuerza_hold_I else "BETTER SCORE"
-                        print(f"  HOLD (1st): guardó {pieza_str}, juega {next_pieza_str} [{reason}]")
+                        reason = "BETTER SCORE"
+                        # print(f"  HOLD (1st): guardó {pieza_str}, juega {next_pieza_str} [{reason}]")
 
         if not usar_hold:
             mode = "LA" if next_pieza_str else "1P"
-            print(f"[{mode}] {pieza_str} col={best_col} rot={best_rot}")
+            # print(f"[{mode}] {pieza_str} col={best_col} rot={best_rot}")
 
         return best_col, best_rot, best_spawn, usar_hold
 

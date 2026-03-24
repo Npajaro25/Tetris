@@ -274,8 +274,8 @@ class Ambiente:
         next_piezas = next_detectado if next_detectado else self.ultima_next
 
         mode = f"| Next: {next_piezas}" if next_piezas else "| Next: ???"
-        print(f"Pieza: {pieza} {mode}")
-        print(tablero)
+        # print(f"Pieza: {pieza} {mode}")
+        # print(tablero)
 
         return tablero, pieza, next_piezas
 

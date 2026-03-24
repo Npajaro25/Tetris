@@ -26,7 +26,7 @@ while True:
     time.sleep(0.1)
 
 stale_count = 0
-MAX_STALE = 8            # 8 ciclos vacíos consecutivos = ~3 segundos = game over
+MAX_STALE = 2            # 2 ciclos vacíos consecutivos = ~0.7 segundos = game over
 game_started = False
 # last_screenshot_time = time.time()
 prev_pieza = None
