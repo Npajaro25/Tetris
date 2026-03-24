@@ -67,10 +67,12 @@ class Tetris_IA:
             for col in range(max_cols):
                 # Evaluar colocación actual
                 heuristicas_actual, _ = self.grid.calculate_heuristics(piece, col)
+                
+                # Si place_piece falló, retorna [-9999, -9999]
+                if heuristicas_actual[0] == -9999:
+                    continue
+                
                 score_actual = sum(heuristicas_actual)
-
-                if score_actual <= -9000:
-                    continue  # Colocación inválida
 
                 # Simular colocación y limpiar líneas
                 new_grid_arr = self.grid.place_piece(piece_matrix, col)
@@ -98,5 +100,4 @@ class Tetris_IA:
                     best_rot = rot
 
         piece.set_current_shape(0)
-        print(f"Mejor jugada (lookahead): score={best_total:.1f}, col={best_col}, rot={best_rot}")
         return best_total, best_col, best_rot, None

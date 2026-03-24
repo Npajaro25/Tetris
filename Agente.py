@@ -17,23 +17,133 @@ class Agente:
             "J": "Purple_L"
         }
 
+        # Estado del Hold
+        self.hold_piece_str = None  # Pieza guardada (string: "T", "I", etc.)
+        self.can_hold = True        # Se resetea cada nuevo turno
+
     def crear_pieza(self, pieza_str):
         nombre = self.mapa_piezas[pieza_str]
         clase = getattr(Piece, nombre)
         return clase()
 
-    def decidir(self, tablero, pieza_str, next_pieza_str=None):
+    def _evaluar_pieza(self, tablero, pieza_str):
+        """Evalúa la mejor jugada para una pieza dada sobre el tablero actual.
+        Retorna (score, col, rot, spawn_col)."""
         self.grid.grid = tablero.tolist()
-
         pieza = self.crear_pieza(pieza_str)
-
-        # Evaluación simple (sin lookahead — más rápido y confiable)
         valor, col, rot, _ = self.ia.get_best_choice(pieza)
 
-        # Obtener spawn_col DESPUÉS de la rotación elegida
         pieza.set_current_shape(rot)
         spawn_col = pieza.grid_position
+        return valor, col, rot, spawn_col
 
-        print(f"→ {pieza_str} col={col} rot={rot}")
+    def _evaluar_pieza_lookahead(self, tablero, pieza_str, next_pieza_str):
+        """Evalúa con 2-piece lookahead.
+        Retorna (score, col, rot, spawn_col)."""
+        self.grid.grid = tablero.tolist()
+        pieza = self.crear_pieza(pieza_str)
+        next_pieza = self.crear_pieza(next_pieza_str)
+        valor, col, rot, _ = self.ia.get_best_choice_lookahead(pieza, next_pieza)
 
-        return col, rot, spawn_col
+        pieza.set_current_shape(rot)
+        spawn_col = pieza.grid_position
+        return valor, col, rot, spawn_col
+
+    def decidir(self, tablero, pieza_str, next_piezas=None):
+        """Decide la mejor acción: jugar pieza actual o usar Hold.
+
+        Retorna (col, rot, spawn_col, usar_hold)
+        - usar_hold=True → Main.py debe ejecutar hold ANTES del movimiento
+        - usar_hold=False → jugar la pieza actual directamente"""
+
+        # Usar la primera pieza para un lookahead rápido y efectivo (2 piezas = <20ms)
+        # Buscar ramas con 3 piezas a profundidad toma >600ms y te haría perder.
+        next_pieza_str = next_piezas[0] if (next_piezas and len(next_piezas) > 0) else None
+        siguiente_lookahead = next_pieza_str
+        
+        # ========== FIX: LOOKAHEAD TIMELINE SCHISM ========== #
+        # Si la pieza que viene es 'I', y NO la vamos a usar para hacer Tetris ahora mismo
+        # (porque la robaremos para el HOLD), el lookahead no debe creer que tiene la 'I' disponible.
+        # Debe creer que tiene la pieza que saldrá del HOLD, o la 2da pieza en la cola NEXT.
+        if next_pieza_str == "I" and self.hold_piece_str != "I":
+            if self.hold_piece_str is not None:
+                siguiente_lookahead = self.hold_piece_str
+            elif next_piezas and len(next_piezas) > 1:
+                siguiente_lookahead = next_piezas[1]
+            else:
+                siguiente_lookahead = None
+
+        # Evaluar pieza actual (con lookahead si tenemos next)
+        # Evaluar pieza actual (con lookahead si tenemos next válido)
+        if siguiente_lookahead:
+            score_current, col_c, rot_c, spawn_c = self._evaluar_pieza_lookahead(
+                tablero, pieza_str, siguiente_lookahead)
+        else:
+            score_current, col_c, rot_c, spawn_c = self._evaluar_pieza(tablero, pieza_str)
+
+        # Inicializar variables de retorno
+        usar_hold = False
+        best_col, best_rot, best_spawn = col_c, rot_c, spawn_c
+
+        # ========== LÓGICA DE HOLD OFENSIVO (GUARDAR LA 'I') ========== #
+        # Si la pieza es 'I' y NO podemos hacer un Tetris (el score de Tetris da +2000),
+        # queremos guardarla desesperadamente en el HOLD.
+        fuerza_hold_I = False
+        if pieza_str == "I" and score_current < 1000 and self.hold_piece_str != "I":
+            fuerza_hold_I = True
+
+        if self.can_hold:
+            if self.hold_piece_str is not None:
+                # Hold OCUPADO: comparar Play Current vs Play Hold
+                # Hold OCUPADO: comparar Play Current vs Play Hold
+                if siguiente_lookahead:
+                    score_hold, col_h, rot_h, spawn_h = self._evaluar_pieza_lookahead(
+                        tablero, self.hold_piece_str, siguiente_lookahead)
+                else:
+                    score_hold, col_h, rot_h, spawn_h = self._evaluar_pieza(
+                        tablero, self.hold_piece_str)
+
+                # TRAP DEL HOLD: Si tenemos la 'I' en el HOLD, la encadenamos ahí.
+                # Solo la soltaremos si sacarla da un Tetris (score_hold masivo > 1000).
+                if self.hold_piece_str == "I" and score_hold < 1000:
+                    score_hold -= 10000
+
+                # Si forzamos guardar 'I', o si el score es legítimamente mejor:
+                if fuerza_hold_I or score_hold > score_current:
+                    usar_hold = True
+                    best_col, best_rot, best_spawn = col_h, rot_h, spawn_h
+                    pieza_que_sale = self.hold_piece_str
+                    self.hold_piece_str = pieza_str
+                    self.can_hold = False
+                    reason = "FORCED (Save I)" if fuerza_hold_I else "BETTER SCORE"
+                    print(f"  HOLD: guardó {pieza_str}, juega {pieza_que_sale} [{reason}]")
+
+            else:
+                # Hold VACÍO: comparar Play Current vs Play Next (Hold Current)
+                # Ojo: si jugamos Next, la que sigue de Lookahead será la que estaba 2da en la cola.
+                lookahead_si_jugamos_next = next_piezas[1] if (next_piezas and len(next_piezas) > 1) else None
+                if next_pieza_str:
+                    if lookahead_si_jugamos_next:
+                        score_next, col_n, rot_n, spawn_n = self._evaluar_pieza_lookahead(
+                            tablero, next_pieza_str, lookahead_si_jugamos_next)
+                    else:
+                        score_next, col_n, rot_n, spawn_n = self._evaluar_pieza(
+                            tablero, next_pieza_str)
+
+                    if fuerza_hold_I or score_next > score_current + 5:
+                        usar_hold = True
+                        best_col, best_rot, best_spawn = col_n, rot_n, spawn_n
+                        self.hold_piece_str = pieza_str
+                        self.can_hold = False
+                        reason = "FORCED (Save I)" if fuerza_hold_I else "BETTER SCORE"
+                        print(f"  HOLD (1st): guardó {pieza_str}, juega {next_pieza_str} [{reason}]")
+
+        if not usar_hold:
+            mode = "LA" if next_pieza_str else "1P"
+            print(f"[{mode}] {pieza_str} col={best_col} rot={best_rot}")
+
+        return best_col, best_rot, best_spawn, usar_hold
+
+    def nuevo_turno(self):
+        """Llamar al inicio de cada nuevo turno para resetear el bloqueo de Hold."""
+        self.can_hold = True

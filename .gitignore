@@ -25,3 +25,8 @@ desktop.ini
 dist/
 build/
 *.egg-info/
+
+# Debug and setup
+roi_config.json
+output.txt
+debug_board_*.png

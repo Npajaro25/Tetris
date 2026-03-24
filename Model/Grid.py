@@ -13,9 +13,8 @@ class Grid:
         return g
 
     def place_piece(self, piece_matrix, col):
-        """Simula caída de la pieza"""
+        """Simula caída de la pieza. Retorna grid o None."""
         grid = np.array(self.grid)
-
         piece_h, piece_w = piece_matrix.shape
 
         for row in range(self.rows - piece_h + 1):
@@ -26,11 +25,29 @@ class Grid:
             final_row = self.rows - piece_h
 
         if final_row < 0:
-            return None 
+            return None
 
         grid = self.merge(grid, piece_matrix, final_row, col)
-
         return grid
+
+    def place_piece_with_row(self, piece_matrix, col):
+        """Simula caída y devuelve (grid, landing_row) para landing height.
+        landing_row es el índice de fila donde queda la parte superior de la pieza."""
+        grid = np.array(self.grid)
+        piece_h, piece_w = piece_matrix.shape
+
+        for row in range(self.rows - piece_h + 1):
+            if self.check_collision(grid, piece_matrix, row, col):
+                final_row = row - 1
+                break
+        else:
+            final_row = self.rows - piece_h
+
+        if final_row < 0:
+            return None, -1
+
+        grid = self.merge(grid, piece_matrix, final_row, col)
+        return grid, final_row
 
     def check_collision(self, grid, piece, row, col):
         for i in range(piece.shape[0]):
@@ -61,62 +78,120 @@ class Grid:
             new_rows.insert(0, [0]*self.cols)
         return np.array(new_rows), lines_cleared
 
-    # ---------------- HEURÍSTICAS ---------------- #
+    # ========== HEURÍSTICAS DELLACHERIE/THIERY ========== #
 
     def calculate_heuristics(self, piece, col):
+        """Algoritmo Dellacherie/Thiery — 6 features optimizadas.
+        Pesos del paper 'Improvements on Learning Tetris with
+        Cross-Entropy' (Thiery & Scherrer, 2009)."""
         piece_matrix = piece.get_optimized_current_matrix()
+        piece_h = piece_matrix.shape[0]
 
-        new_grid = self.place_piece(piece_matrix, col)
-
-        if new_grid is None:
+        result = self.place_piece_with_row(piece_matrix, col)
+        if result[0] is None:
             return [-9999], None
+        placed_grid, landing_row = result
 
-        # Eliminar líneas completas ANTES de evaluar heurísticas
-        new_grid, lineas = self.clear_lines(new_grid)
+        # Contar líneas completadas y celdas de la pieza en ellas
+        lines_cleared = 0
+        piece_cells_eroded = 0
+        for r in range(landing_row, min(landing_row + piece_h, self.rows)):
+            if all(placed_grid[r][c] != 0 for c in range(self.cols)):
+                lines_cleared += 1
+                for c in range(self.cols):
+                    pc = c - col
+                    pr = r - landing_row
+                    if 0 <= pc < piece_matrix.shape[1] and 0 <= pr < piece_h:
+                        if piece_matrix[pr][pc] != 0:
+                            piece_cells_eroded += 1
 
-        heights = self._get_column_heights(new_grid)
-        altura_agg = sum(heights)
-        max_height = max(heights)
-        huecos = self.get_holes(new_grid)
-        bumpiness = self.get_bumpiness_from_heights(heights)
+        # Limpiar líneas completas
+        new_grid, _ = self.clear_lines(placed_grid)
 
-        # Heurística estable (scored 24,394) — NO TOCAR
-        heuristicas = [
-            -0.300000 * altura_agg,
-            +3.000000 * lineas,
-            -1.200000 * huecos,
-            -0.300000 * bumpiness,
-        ]
+        # Feature 1: Landing height — altura desde el FONDO del tablero
+        # Centro de la pieza: (landing_row + landing_row + piece_h - 1) / 2
+        # Altura desde fondo: self.rows - centro
+        landing_height = self.rows - landing_row - (piece_h / 2.0)
 
+        # Usar el grid modificado para los cálculos (col 9 ignorada en features espaciales)
+        height_cols = self._get_column_heights(new_grid)
+        alturas_0_8 = height_cols[:9]
+        
+        # 1. Aggregate Height (0-8)
+        aggregate_height = sum(alturas_0_8)
+        
+        # 2. Bumpiness (0-8)
+        bumpiness = 0
+        for i in range(8):  # Diferencia entre col i y col i+1 (hasta col 8)
+            bumpiness += abs(alturas_0_8[i] - alturas_0_8[i+1])
+            
+        # 3. Holes (0-8)
+        holes = self._get_holes(new_grid)
+        
+        # Pesos heurísticos (Multiplicados por 100 para escalar con la lógica ofensiva)
+        # Basados en pesos estándar de construcción plana (optimizados por algoritmos genéticos)
+        score_base = (-51.0 * aggregate_height) + (-18.4 * bumpiness) + (-35.6 * holes)
+        
+        # ========== OFFENSIVE BLITZ SCORING (EL-TETRIS B2B STYLE) ========== #
+        score_offensive = 0
+        
+        # Determinar altura máxima del tablero para el "Umbral de Pánico"
+        # Usamos new_grid sin considerar la columna 9 (el pozo)
+        height_cols = self._get_column_heights(new_grid)
+        max_h = max(height_cols[:9]) if height_cols else 0
+        
+        # 1. EL POZO (RIGHT WELL): La columna 9 DEBE estar vacía
+        h9 = height_cols[9]
+        if h9 > 0:
+            # Si tapamos el pozo sin hacer Tetris, castigo severo.
+            if lines_cleared < 4:
+                score_offensive -= 500 * h9
+        
+        # 2. SISTEMA DE RECOMPENSAS POR LÍNEAS Y CASTIGO POR HUECOS
+        if lines_cleared == 4:
+            # TETRIS: ¡Recompensa masiva!
+            score_offensive += 3000
+        elif lines_cleared > 0:
+            if max_h < 14:
+                # CASTIGO POR QUEMAR LÍNEAS: Queremos Tetrises.
+                # Debe ser MENOR al castigo por huecos (-500) para que
+                # prefiera quemar línea antes que dejar un hueco.
+                score_offensive -= 100 * lines_cleared
+            else:
+                # MODO PÁNICO: Recompensar limpieza para sobrevivir
+                score_offensive += 500 * lines_cleared
+                
+        # 3. MANTENER EL TABLERO SANO Y PLANO PARA TETRISES
+        # El rango de altura destruye implacablemente la tendencia natural de la IA
+        # a construir escaleras infinitas en la pared izquierda (el óptimo local codicioso).
+        if alturas_0_8:
+            rango_altura = max(alturas_0_8) - min(alturas_0_8)
+            score_offensive -= 100.0 * rango_altura
+            
+        # Castigo BRUTAL (-500) para que NUNCA deje huecos.
+        score_offensive -= 500 * holes
+
+        heuristicas = [score_base, score_offensive]
         return heuristicas, None
 
-    def _get_well_bonus(self, heights):
-        """Bonus por tener un 'pozo' (1 columna vacía o baja) para Tetris."""
-        bonus = 0
-        for i in range(len(heights)):
-            # Vecinos del pozo
-            left_h = heights[i - 1] if i > 0 else 20
-            right_h = heights[i + 1] if i < len(heights) - 1 else 20
-            min_neighbor = min(left_h, right_h)
-            depth = min_neighbor - heights[i]  # Profundidad del pozo
-            if depth >= 3:
-                # Solo dar bonus si el pozo es profundo (≥3) y la columna es baja
-                bonus += depth * 0.5
-        return bonus
+    # ========== FEATURE FUNCTIONS ========== #
 
-    def _get_row_transitions(self, grid):
-        """Cuenta transiciones 0→1 y 1→0 dentro de cada fila (excluyendo vacías)."""
-        transitions = 0
-        for row in grid:
-            if all(cell == 0 for cell in row):
-                continue
-            for j in range(len(row) - 1):
-                if row[j] != row[j + 1]:
-                    transitions += 1
-        return transitions
+    def _get_holes(self, grid):
+        """Cuenta huecos en las columnas 0-8. Un hueco es un 0 con al menos un 1 por encima."""
+        holes = 0
+        limit_col = self.cols - 1
+        for col in range(limit_col):
+            block_found = False
+            for row in range(self.rows):
+                if grid[row][col] != 0:
+                    block_found = True
+                elif block_found:
+                    holes += 1
+        return holes
+
+    # ========== HELPERS ========== #
 
     def _get_column_heights(self, grid):
-        """Devuelve la altura de cada columna como lista."""
         heights = []
         for col in range(self.cols):
             h = 0
@@ -131,15 +206,7 @@ class Grid:
         return sum(self._get_column_heights(grid))
 
     def get_holes(self, grid):
-        holes = 0
-        for col in range(self.cols):
-            block_found = False
-            for row in range(self.rows):
-                if grid[row][col] != 0:
-                    block_found = True
-                elif block_found:
-                    holes += 1
-        return holes
+        return self._get_holes(grid)
 
     def get_complete_lines(self, grid):
         return sum(1 for row in grid if all(cell != 0 for cell in row))
