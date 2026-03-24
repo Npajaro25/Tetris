@@ -80,5 +80,5 @@ while True:
     # Avanzar la pieza: la actual pasa a ser lo que era NEXT
     ambiente.avanzar_pieza(next_pieza)
 
-    # Espera para que la pieza asiente + line clear animation
-    time.sleep(0.35)
+    # Espera estable para que la pieza asiente + line clear animation termine (anti-ghosting)
+    time.sleep(0.28)
