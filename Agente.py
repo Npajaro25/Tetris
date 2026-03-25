@@ -35,11 +35,12 @@ class Agente:
 
         pieza.set_current_shape(rot)
         spawn_col = pieza.grid_position
-        return valor, col, rot, spawn_col
+        width_pieza = pieza.get_optimized_current_matrix().shape[1]
+        return valor, col, rot, spawn_col, width_pieza
 
     def _evaluar_pieza_lookahead(self, tablero, pieza_str, next_piezas_strs):
         """Evalúa con N-piece lookahead.
-        Retorna (score, col, rot, spawn_col)."""
+        Retorna (score, col, rot, spawn_col, width_pieza)."""
         self.grid.grid = tablero.tolist()
         pieza = self.crear_pieza(pieza_str)
         
@@ -50,7 +51,8 @@ class Agente:
 
         pieza.set_current_shape(rot)
         spawn_col = pieza.grid_position
-        return valor, col, rot, spawn_col
+        width_pieza = pieza.get_optimized_current_matrix().shape[1]
+        return valor, col, rot, spawn_col, width_pieza
 
     def decidir(self, tablero, pieza_str, next_piezas=None):
         """Decide la mejor acción: jugar pieza actual o usar Hold."""
@@ -80,14 +82,14 @@ class Agente:
 
         # Evaluar pieza actual
         if candidatos_lookahead:
-            score_current, col_c, rot_c, spawn_c = self._evaluar_pieza_lookahead(
+            score_current, col_c, rot_c, spawn_c, width_c = self._evaluar_pieza_lookahead(
                 tablero, pieza_str, candidatos_lookahead)
         else:
-            score_current, col_c, rot_c, spawn_c = self._evaluar_pieza(tablero, pieza_str)
+            score_current, col_c, rot_c, spawn_c, width_c = self._evaluar_pieza(tablero, pieza_str)
 
         # Inicializar variables de retorno
         usar_hold = False
-        best_col, best_rot, best_spawn = col_c, rot_c, spawn_c
+        best_col, best_rot, best_spawn, best_width = col_c, rot_c, spawn_c, width_c
 
         # ========== LÓGICA DE HOLD NATURAL CON PREFERENCIA DE 'I' ========== #
         bonus_I = 500
@@ -97,10 +99,10 @@ class Agente:
             if self.hold_piece_str is not None:
                 # Hold OCUPADO: comparar Play Current vs Play Hold
                 if candidatos_lookahead:
-                    score_hold, col_h, rot_h, spawn_h = self._evaluar_pieza_lookahead(
+                    score_hold, col_h, rot_h, spawn_h, width_h = self._evaluar_pieza_lookahead(
                         tablero, self.hold_piece_str, candidatos_lookahead)
                 else:
-                    score_hold, col_h, rot_h, spawn_h = self._evaluar_pieza(
+                    score_hold, col_h, rot_h, spawn_h, width_h = self._evaluar_pieza(
                         tablero, self.hold_piece_str)
 
                 # Si el score efectivo del hold es legítimamente mejor:
@@ -108,7 +110,7 @@ class Agente:
                 
                 if efectivo_hold > efectivo_current:
                     usar_hold = True
-                    best_col, best_rot, best_spawn = col_h, rot_h, spawn_h
+                    best_col, best_rot, best_spawn, best_width = col_h, rot_h, spawn_h, width_h
                     pieza_que_sale = self.hold_piece_str
                     self.hold_piece_str = pieza_str
                     self.can_hold = False
@@ -121,17 +123,17 @@ class Agente:
                 lookahead_si_jugamos_next = upcoming_queue[1:4] if len(upcoming_queue) > 1 else []
                 if next_pieza_str:
                     if lookahead_si_jugamos_next:
-                        score_next, col_n, rot_n, spawn_n = self._evaluar_pieza_lookahead(
+                        score_next, col_n, rot_n, spawn_n, width_n = self._evaluar_pieza_lookahead(
                             tablero, next_pieza_str, lookahead_si_jugamos_next)
                     else:
-                        score_next, col_n, rot_n, spawn_n = self._evaluar_pieza(
+                        score_next, col_n, rot_n, spawn_n, width_n = self._evaluar_pieza(
                             tablero, next_pieza_str)
 
                     efectivo_next = score_next + (bonus_I if pieza_str == "I" else 0)
                     
                     if efectivo_next > efectivo_current + 5: # Conservador para cambiar hold vacío
                         usar_hold = True
-                        best_col, best_rot, best_spawn = col_n, rot_n, spawn_n
+                        best_col, best_rot, best_spawn, best_width = col_n, rot_n, spawn_n, width_n
                         self.hold_piece_str = pieza_str
                         self.can_hold = False
                         reason = "BETTER SCORE"

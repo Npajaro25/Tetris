@@ -156,6 +156,13 @@ class Grid:
             # Debe ser MENOR al castigo por huecos (-500) para que
             # prefiera quemar línea antes que dejar un hueco.
             score_offensive -= 100 * lines_cleared
+            
+        # 2.5 PERFECT CLEAR DREAMS (ALL CLEAR)
+        # Si limpiar estas líneas resulta en un tablero matemáticamente vacío:
+        if lines_cleared > 0 and not any(any(cell != 0 for cell in row) for row in new_grid):
+            # El juego da 3500 puntos oficiales. Para nuestra IA esto es el Valhalla.
+            # Si ve un Perfect Clear a 2 piezas de distancia, sacrificará todo por él.
+            score_offensive += 50000
                 
         # 3. MANTENER EL TABLERO SANO Y PLANO PARA TETRISES
         # El rango de altura destruye implacablemente la tendencia natural de la IA

@@ -20,7 +20,14 @@ def hrd_sleep(duration):
 # Esto evita que excedamos el "Lock Delay" (500ms) de TETR.IO en niveles de gravedad máxima
 MOVE_DELAY = 0.002   # 2ms entre movimientos
 ROT_DELAY = 0.005    # 5ms entre rotaciones
-FINAL_DELAY = 0.010  # 10ms pausa antes del hard drop
+
+# ========== PACEMAKER (Control de APM) ========== #
+# En lugar de pausar el bot DESPUÉS de tirar la ficha (lo que hacía que
+# la IA se durmiera mientras la siguiente ficha caía al vacío y se atascaba
+# en el Nivel 8), pausamos la ficha una décima de segundo MIENTRAS está
+# controlada artificialmente justo antes de tirarla al fondo.
+FINAL_DELAY = 0.180  # 180ms pausa antes del hard drop
+
 HOLD_DELAY = 0.020   # 20ms después de hold
 
 def _secure_press(key, press_duration=0.030):
@@ -42,6 +49,7 @@ def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3):
     desplazamiento = col_objetivo - spawn_col
     tecla = RIGHT if desplazamiento > 0 else LEFT
 
+    # Movimiento REQUIERE taps exactos. DAS está deshabilitado por variabilidad de configuraciones.
     for _ in range(abs(desplazamiento)):
         _secure_press(tecla)
         hrd_sleep(MOVE_DELAY)

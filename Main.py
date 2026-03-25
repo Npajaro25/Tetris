@@ -43,31 +43,32 @@ game_started = False
 start_time = None
 prev_pieza = None
 prev_next = None
+piezas_colocadas = 0     # Contador para estimar el Nivel (Level ~1 por cada 25 piezas)
 
 while True:
     tablero, pieza, next_pieza = ambiente.obtener_estado()
 
-    # ========== TIME OVER ESTRICTO (120 Segundos) ========== #
+    # ========== SISTEMA DE EVIDENCIA POR NIVEL / TIEMPO ========== #
     if game_started:
         elapsed = time.time() - start_time
         
-        # Capturas de evidencia en los últimos segundos (115s a 122s)
-        if 115 <= elapsed <= 122:
+        # El usuario pidió capturas desde el Nivel 10 (aprox >230 piezas) o faltando pocos segundos
+        if (115 <= elapsed <= 122) or (piezas_colocadas > 230):
             if not hasattr(ambiente, 'last_evidence_time'):
                 ambiente.last_evidence_time = 0
             if time.time() - ambiente.last_evidence_time >= 1.0:
-                # Capturar toda la pantalla (monitor 1) para garantizar que se vea la UI exterior y la puntuación
                 full_screen = np.array(ambiente.sct.grab(ambiente.sct.monitors[1]))
                 full_screen = cv2.cvtColor(full_screen, cv2.COLOR_BGRA2BGR)
                 
-                img_path = os.path.join(evidence_dir, f"evidence_sec_{int(elapsed)}.png")
+                estado = f"sec_{int(elapsed)}_pz_{piezas_colocadas}"
+                img_path = os.path.join(evidence_dir, f"evidence_{estado}.png")
                 cv2.imwrite(img_path, full_screen)
                 
                 ambiente.last_evidence_time = time.time()
-                print(f"[DEBUG] Evidencia final guardada (Full Screen): {img_path}")
+                print(f"[DEBUG] Evidencia Nivel Alto/Final guardada: {img_path}")
 
         if elapsed >= 122: # 120s de Blitz + 2s de gracia (animación inicial)
-            print("¡Tiempo límite de TETR.IO Blitz alcanzado! Deteniendo agente para ver puntuación.")
+            print("¡Tiempo límite de TETR.IO Blitz alcanzado! Deteniendo agente.")
             break
 
     # ========== DETECCIÓN DE TABLERO VACÍO ========== #
@@ -84,6 +85,12 @@ while True:
             stale_count += 1
             if stale_count >= MAX_STALE:
                 print("Game over detectado (tablero vacío persistente). Deteniendo agente.")
+                # CAPTURA FINAL GARANTIZADA SI MUERE ANTES DE LOS 120s
+                full_screen = np.array(ambiente.sct.grab(ambiente.sct.monitors[1]))
+                full_screen = cv2.cvtColor(full_screen, cv2.COLOR_BGRA2BGR)
+                img_path = os.path.join(evidence_dir, "evidence_GAMEOVER_PREMATURO.png")
+                cv2.imwrite(img_path, full_screen)
+                print(f"[DEBUG] Evidencia Game Over guardada: {img_path}")
                 break
             time.sleep(0.35)
             continue
@@ -107,9 +114,13 @@ while True:
         next_pieza = ambiente._detectar_next()
 
     ejecutar_movimiento(col, rot, spawn_col)
+    piezas_colocadas += 1
 
-    # Avanzar la pieza: la actual pasa a ser lo que era NEXT
+    # Avance de estado de IA
     ambiente.avanzar_pieza(next_pieza)
 
-    # Espera estable para que la pieza asiente + line clear animation termine (anti-ghosting)
-    time.sleep(0.28)
+    # Espera hiper-corta (90ms). El Flood-Fill de Ambiente.py ya limpia fantasmas.
+    # El verdadero "Pacemaker" para no subir a Nivel 10 tan rápido ahora vive
+    # adentro de Control.py (FINAL_DELAY), pausando la pieza antes de caer en 
+    # lugar de pausar los ojos de la cámara, evitando los bloqueos de física 20G.
+    time.sleep(0.09)
