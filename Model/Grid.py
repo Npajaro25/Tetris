@@ -152,14 +152,10 @@ class Grid:
             # TETRIS: ¡Recompensa masiva!
             score_offensive += 3000
         elif lines_cleared > 0:
-            if max_h < 14:
-                # CASTIGO POR QUEMAR LÍNEAS: Queremos Tetrises.
-                # Debe ser MENOR al castigo por huecos (-500) para que
-                # prefiera quemar línea antes que dejar un hueco.
-                score_offensive -= 100 * lines_cleared
-            else:
-                # MODO PÁNICO: Recompensar limpieza para sobrevivir
-                score_offensive += 500 * lines_cleared
+            # CASTIGO POR QUEMAR LÍNEAS: Queremos Tetrises.
+            # Debe ser MENOR al castigo por huecos (-500) para que
+            # prefiera quemar línea antes que dejar un hueco.
+            score_offensive -= 100 * lines_cleared
                 
         # 3. MANTENER EL TABLERO SANO Y PLANO PARA TETRISES
         # El rango de altura destruye implacablemente la tendencia natural de la IA

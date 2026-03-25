@@ -16,16 +16,17 @@ def hrd_sleep(duration):
     while time.perf_counter() - start < duration:
         pass
 
-# Delays precisos para evadir que la pieza caiga antes de llegar a los laterales
-MOVE_DELAY = 0.005   # 5ms entre movimientos laterales (acelerado para compensar el press_duration de 30ms)
-ROT_DELAY = 0.010    # 10ms entre rotaciones
-FINAL_DELAY = 0.020  # 20ms pausa antes del hard drop
-HOLD_DELAY = 0.030   # 30ms después de hold para que TETR.IO procese
+# Delays ultra-rápidos para compensar el lag inherente de PyAutoGUI en Windows (~15ms por llamada)
+# Esto evita que excedamos el "Lock Delay" (500ms) de TETR.IO en niveles de gravedad máxima
+MOVE_DELAY = 0.002   # 2ms entre movimientos
+ROT_DELAY = 0.005    # 5ms entre rotaciones
+FINAL_DELAY = 0.010  # 10ms pausa antes del hard drop
+HOLD_DELAY = 0.020   # 20ms después de hold
 
 def _secure_press(key, press_duration=0.030):
     """
-    Mantener la tecla 30ms garantiza abarcar ~2 frames de registro en TETR.IO a 60FPS (16.6ms/frame).
-    Es vital para PCs de universidad (60Hz) evitar inputs perdidos ('misdrops').
+    Mantener la tecla 30ms asegura registro rápido sin comerse el timer de Lock Delay,
+    mientras cubre 2 frames completos en 60Hz para evitar inputs droppeados.
     """
     pyautogui.keyDown(key)
     hrd_sleep(press_duration)

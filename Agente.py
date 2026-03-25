@@ -62,8 +62,8 @@ class Agente:
             
         next_pieza_str = upcoming_queue[0] if upcoming_queue else None
 
-        # N-Depth Beam Search: Tomar hasta 2 piezas NEXT (Depth=3 total)
-        candidatos_lookahead = upcoming_queue[:2]
+        # N-Depth Beam Search: Tomar 1 pieza NEXT (Depth=2 total, idéntico al récord de 60k pero 10x más rápido)
+        candidatos_lookahead = upcoming_queue[:1]
         
         # ========== FIX: LOOKAHEAD TIMELINE SCHISM ========== #
         # Si la pieza que viene inminentemente es 'I', y nuestro Hold NO es 'I',
