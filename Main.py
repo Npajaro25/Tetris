@@ -56,10 +56,15 @@ while True:
             if not hasattr(ambiente, 'last_evidence_time'):
                 ambiente.last_evidence_time = 0
             if time.time() - ambiente.last_evidence_time >= 1.0:
+                # Capturar toda la pantalla (monitor 1) para garantizar que se vea la UI exterior y la puntuación
+                full_screen = np.array(ambiente.sct.grab(ambiente.sct.monitors[1]))
+                full_screen = cv2.cvtColor(full_screen, cv2.COLOR_BGRA2BGR)
+                
                 img_path = os.path.join(evidence_dir, f"evidence_sec_{int(elapsed)}.png")
-                cv2.imwrite(img_path, ambiente.capturar())
+                cv2.imwrite(img_path, full_screen)
+                
                 ambiente.last_evidence_time = time.time()
-                print(f"[DEBUG] Evidencia final guardada: {img_path}")
+                print(f"[DEBUG] Evidencia final guardada (Full Screen): {img_path}")
 
         if elapsed >= 122: # 120s de Blitz + 2s de gracia (animación inicial)
             print("¡Tiempo límite de TETR.IO Blitz alcanzado! Deteniendo agente para ver puntuación.")
