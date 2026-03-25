@@ -64,12 +64,12 @@ class Agente:
             
         next_pieza_str = upcoming_queue[0] if upcoming_queue else None
 
-        # N-Depth Beam Search: Tomar 1 pieza NEXT (Depth=2 total, idéntico al récord de 60k pero 10x más rápido)
+        # N-Depth Beam Search: Tomar 1 pieza NEXT (Depth=2 total, el "Sweet Spot" para Dellacherie)
         candidatos_lookahead = upcoming_queue[:1]
         
         # ========== FIX: LOOKAHEAD TIMELINE SCHISM ========== #
         # Si la pieza que viene inminentemente es 'I', y nuestro Hold NO es 'I',
-        # es altamente probable que la capturemos en el Hold en vez de jugarla.
+        # es altamente probable que la capture en el Hold en vez de jugarla.
         # Para que el lookahead lineal no se confunda y la estrelle contra el suelo,
         # la sustituimos lógicamente por la pieza de Hold o la adelantamos.
         if next_pieza_str == "I" and self.hold_piece_str != "I":
@@ -143,7 +143,7 @@ class Agente:
             mode = "LA" if next_pieza_str else "1P"
             # print(f"[{mode}] {pieza_str} col={best_col} rot={best_rot}")
 
-        return best_col, best_rot, best_spawn, usar_hold
+        return best_col, best_rot, best_spawn, best_width, usar_hold
 
     def nuevo_turno(self):
         """Llamar al inicio de cada nuevo turno para resetear el bloqueo de Hold."""

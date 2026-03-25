@@ -30,3 +30,4 @@ build/
 roi_config.json
 output.txt
 debug_board_*.png
+evidences/

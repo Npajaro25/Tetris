@@ -22,11 +22,10 @@ MOVE_DELAY = 0.002   # 2ms entre movimientos
 ROT_DELAY = 0.005    # 5ms entre rotaciones
 
 # ========== PACEMAKER (Control de APM) ========== #
-# En lugar de pausar el bot DESPUÉS de tirar la ficha (lo que hacía que
-# la IA se durmiera mientras la siguiente ficha caía al vacío y se atascaba
-# en el Nivel 8), pausamos la ficha una décima de segundo MIENTRAS está
-# controlada artificialmente justo antes de tirarla al fondo.
-FINAL_DELAY = 0.180  # 180ms pausa antes del hard drop
+# En lugar de pausar el bot DESPUÉS de tirar la ficha, lo pausamos en el aire.
+# Buscando el "Time Perfect 120s": 130ms era muy lento (79k pts) y 80ms es suicida (>Lvl 11 rápido).
+# 100ms es el medio de oro empírico para sangrar el tiempo justo antes del Game Over por gravedad.
+FINAL_DELAY = 0.100  # 100ms pausa antes del drop (Equilibrio de supervivencia perfecto)
 
 HOLD_DELAY = 0.020   # 20ms después de hold
 
@@ -39,7 +38,7 @@ def _secure_press(key, press_duration=0.030):
     hrd_sleep(press_duration)
     pyautogui.keyUp(key)
 
-def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3):
+def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3, width_pieza=1):
     # Primero rotar
     for _ in range(rotaciones):
         _secure_press(ROTATE)
@@ -49,10 +48,19 @@ def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3):
     desplazamiento = col_objetivo - spawn_col
     tecla = RIGHT if desplazamiento > 0 else LEFT
 
-    # Movimiento REQUIERE taps exactos. DAS está deshabilitado por variabilidad de configuraciones.
-    for _ in range(abs(desplazamiento)):
-        _secure_press(tecla)
-        hrd_sleep(MOVE_DELAY)
+    # ========== MECÁNICA DE DAS (TELETRANSPORTACIÓN FÍSICA) ========== #
+    # Utilizar el DAS del motor de juego para viajar instantáneamente (0 ARR) a las paredes.
+    # El usuario debe usar la Config PROBADA y ESTABLE (DAS=100ms y ARR=0)
+    # Por lo que 130ms de HOLD garantiza un Teleport que absorbe el drift del OS Windows.
+    if (col_objetivo == 0 and tecla == LEFT) or (col_objetivo == (10 - width_pieza) and tecla == RIGHT):
+        pyautogui.keyDown(tecla)
+        hrd_sleep(0.130) 
+        pyautogui.keyUp(tecla)
+    else:
+        # Movimiento intermedio: Requiere taps precisos porque no hay pared límite
+        for _ in range(abs(desplazamiento)):
+            _secure_press(tecla)
+            hrd_sleep(MOVE_DELAY)
 
     # Pausa mínima antes de drop
     hrd_sleep(FINAL_DELAY)

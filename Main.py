@@ -14,7 +14,7 @@ agente = Agente()
 print("Esperando a que el tablero esté completamente limpio de UI...")
 intentos = 0
 while True:
-    # Solo necesitamos el tablero para ver si está vacío
+    # Solo necesita el tablero para ver si está vacío
     img = ambiente.capturar()
     tablero = ambiente._detectar_tablero(img)
     if tablero is not None and np.sum(tablero) == 0:
@@ -52,8 +52,8 @@ while True:
     if game_started:
         elapsed = time.time() - start_time
         
-        # El usuario pidió capturas desde el Nivel 10 (aprox >230 piezas) o faltando pocos segundos
-        if (115 <= elapsed <= 122) or (piezas_colocadas > 230):
+        # Capturas desde el Nivel 8.5 (aprox >200 piezas) o faltando pocos segundos
+        if (115 <= elapsed <= 122) or (piezas_colocadas > 200):
             if not hasattr(ambiente, 'last_evidence_time'):
                 ambiente.last_evidence_time = 0
             if time.time() - ambiente.last_evidence_time >= 1.0:
@@ -103,7 +103,7 @@ while True:
     # Resetear Hold al inicio de cada nuevo turno (El agente decide si usar el slot)
     agente.nuevo_turno()
 
-    col, rot, spawn_col, usar_hold = agente.decidir(tablero, pieza, next_pieza)
+    col, rot, spawn_col, width_pieza, usar_hold = agente.decidir(tablero, pieza, next_pieza)
 
     if usar_hold:
         ejecutar_hold()
@@ -113,7 +113,7 @@ while True:
         # Necesitamos saber cuál es la NUEVA pieza en el panel NEXT
         next_pieza = ambiente._detectar_next()
 
-    ejecutar_movimiento(col, rot, spawn_col)
+    ejecutar_movimiento(col, rot, spawn_col, width_pieza)
     piezas_colocadas += 1
 
     # Avance de estado de IA

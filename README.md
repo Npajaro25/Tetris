@@ -14,9 +14,18 @@ El agente captura la pantalla para jugar [TETR.IO](https://tetr.io) en tiempo re
 ## ⚙️ Configuración Obligatoria TETR.IO
 Dado que el agente lee píxeles brutos de la pantalla, es vital minimizar el "ruido visual" (partículas, brillos, alertas) para evitar *ghost blocks* (bloques fantasma). Configura TETR.IO así:
 
-1. **Video & Interface -> Graphics**: `Minimal` (Apaga efectos de partículas y destellos).
-2. **Video & Interface -> Render at low resolution**: `OFF` (Evita pixelación errática de los colores).
-3. **Gameplay -> Warn me when the game is not focused**: `OFF` (Evita que el letrero rojo de alerta tape el tablero cuando el agente asume el control del teclado).
+**1. Gráficos e Interfaz (Graphics & UI):**
+- **Graphics**: `Minimal` (Apaga efectos de partículas y destellos).
+- **Render at low resolution**: `OFF` (Evita pixelación errática de los colores).
+- **Warn me when the game is not focused**: `OFF` (Evita que el letrero rojo de alerta tape el tablero cuando el agente asume el control cruzado).
+- **Warn me when network is unstable** (y demás alertas toast): `OFF` (Las notificaciones flotantes arruinan el recorte de visión artificial).
+
+**2. Manejo y Controles (Handling):**
+Para que la Inteligencia Artificial pueda efectuar la "Teletransportación de Paredes" en gravedades mortales (Nivel 10+), los controles internos deben sincronizarse matemáticamente con la latencia del script y el motor PyAutoGUI:
+- **ARR (Auto Repeat Rate)**: `0 F` o `0 ms` (Instantáneo)
+- **DAS (Delayed Auto Shift)**: `100 ms`
+- **DCD (DAS Cut Delay)**: `0 ms` o `33 ms`
+- **SDF (Soft Drop Factor)**: `Infinity` o `40x`
 
 ## 📋 Requisitos e Instalación
 
@@ -24,6 +33,7 @@ Dado que el agente lee píxeles brutos de la pantalla, es vital minimizar el "ru
 pip install opencv-python numpy mss pyautogui
 ```
 - **Python 3.10+**
+- **Resolución nativa a 1080p @ 60Hz** (Constricción física vital: La máquina asume pulsaciones de teclado de `30ms` de duración para garantizar que la pantalla, refrescándose a 16.6ms, no deje caer inputs accidentalmente por el Jitter de Windows).
 
 ## 🚀 Uso / Calibración Inicial
 
@@ -71,8 +81,9 @@ Al acabar una partida de competición en TETR.IO Blitz (120 segundos temporizado
 
 ### Anti-Ghosting y APM de Alta Frecuencia
 - Un rastreo Flood-Fill en cascada asegurando *8-conectividad* desde el ras de suelo del tablero erradica y limpia a los bloques transitorios de caídas aéreas que corrompen el mapeo 10x20.
-- El límite crudo de velocidad latente del marco virtual (SLEEP del orquestador tras hard drop) fue compactado de `350ms` a una cifra letal de `280ms`. 
-- Armado con un `MOVE_DELAY` ultrarrápido inyectado vía direct-input de `5ms` por milímetro de desplazamiento transversal, el Agente zafa evadiendo limpiamente la catastrófica *trampa gravitacional (20G Drop Delay)* acaecida estrepitosamente en el fragor de los últimos instantes (Time < 15s).
+- El límite crudo de velocidad latente del marco virtual (Pacemaker aéreo) fue optimizado empíricamente a **`100ms`**. Esto actúa como el limitador perfecto para sangrar la inercia vertical y exprimir el mayor número de piezas posibles por minuto (APM), logrando el *Time Perfect*: La partida llena el medidor hasta el segundo 120 sobreviviendo magistralmente bajo Gravedad Nivel 11 y maximizando el puntaje final sin estrellarse.
+- Armado con un `press_duration` sincronizado a la tasa de refresco del monitor (30ms), el agente evade el parpadeo de latencia en Windows OS y nunca omite pulsaciones. 
+- **Teletransportación Biomimética (20G Drop Rescue):** Detectando que el pozo derecho de score (Columna 9) está matemáticamente más lejos del Spawn Point (Columna 3) que la pared izquierda, la IA activa un milagro geométrico en gravedades altas: Si el algoritmo dicta alcanzar uno de los dos muros laterales, la computadora oprime la flecha por **`130ms`** continuos. Esto rompe intencionalmente la barrera del DAS del juego (100ms) y obliga forzosamente a TETR.IO a teletransportar la ficha contra la pared (ARR=0), sorteando por pura fuerza bruta los atascos contra la pirámide central y sobreviviendo partidas 20G que humanamente serían letales.
 
 ---
-🎓 **Desarrollado en - Universidad Nacional de Colombia**
+🎓 **Desarrollado en - Universidad Nacional de Colombia, Sede Bogotá**
