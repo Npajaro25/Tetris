@@ -5,6 +5,7 @@ from Control import ejecutar_movimiento, ejecutar_hold
 import numpy as np
 import cv2
 import os
+import glob
 
 ambiente = Ambiente()
 agente = Agente()
@@ -25,6 +26,17 @@ while True:
         break
     time.sleep(0.1)
 
+# Limpiar evidencias de la partida anterior
+evidence_dir = "evidences"
+if not os.path.exists(evidence_dir):
+    os.makedirs(evidence_dir)
+else:
+    for f in glob.glob(os.path.join(evidence_dir, "evidence_*.png")):
+        try:
+            os.remove(f)
+        except Exception:
+            pass
+
 stale_count = 0
 MAX_STALE = 2            # 2 ciclos vacíos consecutivos = ~0.7 segundos = game over
 game_started = False
@@ -37,7 +49,19 @@ while True:
 
     # ========== TIME OVER ESTRICTO (120 Segundos) ========== #
     if game_started:
-        if time.time() - start_time >= 122: # 120s de Blitz + 2s de gracia (animación inicial)
+        elapsed = time.time() - start_time
+        
+        # Capturas de evidencia en los últimos segundos (115s a 122s)
+        if 115 <= elapsed <= 122:
+            if not hasattr(ambiente, 'last_evidence_time'):
+                ambiente.last_evidence_time = 0
+            if time.time() - ambiente.last_evidence_time >= 1.0:
+                img_path = os.path.join(evidence_dir, f"evidence_sec_{int(elapsed)}.png")
+                cv2.imwrite(img_path, ambiente.capturar())
+                ambiente.last_evidence_time = time.time()
+                print(f"[DEBUG] Evidencia final guardada: {img_path}")
+
+        if elapsed >= 122: # 120s de Blitz + 2s de gracia (animación inicial)
             print("¡Tiempo límite de TETR.IO Blitz alcanzado! Deteniendo agente para ver puntuación.")
             break
 
