@@ -1,4 +1,4 @@
-# 🎮 Tetris AI Agent
+# 🎮 Agente Tetris - Grupo Chiminigagua
 
 Proyecto final de Sistemas Inteligentes — **Agente autónomo que juega TETR.IO Blitz** usando visión por computadora, heurísticas ofensivas basadas en N-Depth Beam Search Lookahead, y estrategia de Hold dinámica ("Soft I-Trap").
 
