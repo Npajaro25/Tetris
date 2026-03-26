@@ -48,10 +48,6 @@ def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3, width_pieza=1):
     desplazamiento = col_objetivo - spawn_col
     tecla = RIGHT if desplazamiento > 0 else LEFT
 
-    # ========== MECÁNICA DE DAS (TELETRANSPORTACIÓN FÍSICA) ========== #
-    # Utilizar el DAS del motor de juego para viajar instantáneamente (0 ARR) a las paredes.
-    # El usuario debe usar la Config PROBADA y ESTABLE (DAS=100ms y ARR=0)
-    # Por lo que 130ms de HOLD garantiza un Teleport que absorbe el drift del OS Windows.
     if (col_objetivo == 0 and tecla == LEFT) or (col_objetivo == (10 - width_pieza) and tecla == RIGHT):
         pyautogui.keyDown(tecla)
         hrd_sleep(0.130) 
@@ -65,11 +61,6 @@ def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3, width_pieza=1):
     # Pausa mínima antes de drop
     hrd_sleep(FINAL_DELAY)
     _secure_press(DROP)
-    
-    # DELAY VITAL: El "Hard Drop" en TETR.IO genera un flash brillante / onda expansiva.
-    # 0.05s es suficiente para que la pieza se solidifique visualmente.
-    hrd_sleep(0.05)
-
 
 def ejecutar_hold():
     """Presiona la tecla correspondiente para hacer Hold swap."""
