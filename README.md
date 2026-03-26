@@ -20,13 +20,6 @@ Dado que el agente lee píxeles brutos de la pantalla, es vital minimizar el "ru
 - **Warn me when the game is not focused**: `OFF` (Evita que el letrero rojo de alerta tape el tablero cuando el agente asume el control cruzado).
 - **Warn me when network is unstable** (y demás alertas toast): `OFF` (Las notificaciones flotantes arruinan el recorte de visión artificial).
 
-**2. Manejo y Controles (Handling):**
-Para que la Inteligencia Artificial pueda efectuar la "Teletransportación de Paredes" en gravedades mortales (Nivel 10+), los controles internos deben sincronizarse matemáticamente con la latencia del script y el motor PyAutoGUI:
-- **ARR (Auto Repeat Rate)**: `0 F` o `0 ms` (Instantáneo)
-- **DAS (Delayed Auto Shift)**: `100 ms`
-- **DCD (DAS Cut Delay)**: `0 ms` o `33 ms`
-- **SDF (Soft Drop Factor)**: `Infinity` o `40x`
-
 ## 📋 Requisitos e Instalación
 
 ```bash
@@ -42,7 +35,7 @@ python main.py
 ```
 
 1. Asegúrate de tener TETR.IO visible y limpio en pantalla.
-2. La terminal te dará **5 segundos** de gracia para enfocar la ventana del juego de Tetris.
+2. La terminal te dará **3 segundos** de gracia para enfocar la ventana del juego de Tetris.
 3. Arrastra y selecciona con el mouse el **tablero de juego**, la **cola NEXT** y la **caja HOLD**.
 4. Presiona **SPACE** o **ENTER** para confirmar cada recorte (Guarda automáticamente las coordenadas en `roi_config.json` para tus futuras partidas si no mueves la ventana).
 5. ¡El agente arranca a jugar solo a máxima velocidad!
@@ -83,7 +76,7 @@ Al acabar una partida de competición en TETR.IO Blitz (120 segundos temporizado
 - Un rastreo Flood-Fill en cascada asegurando *8-conectividad* desde el ras de suelo del tablero erradica y limpia a los bloques transitorios de caídas aéreas que corrompen el mapeo 10x20.
 - El límite crudo de velocidad latente del marco virtual (Pacemaker aéreo) fue optimizado empíricamente a **`100ms`**. Esto actúa como el limitador perfecto para sangrar la inercia vertical y exprimir el mayor número de piezas posibles por minuto (APM), logrando el *Time Perfect*: La partida llena el medidor hasta el segundo 120 sobreviviendo magistralmente bajo Gravedad Nivel 11 y maximizando el puntaje final sin estrellarse.
 - Armado con un `press_duration` sincronizado a la tasa de refresco del monitor (30ms), el agente evade el parpadeo de latencia en Windows OS y nunca omite pulsaciones. 
-- **Teletransportación Biomimética (20G Drop Rescue):** Detectando que el pozo derecho de score (Columna 9) está matemáticamente más lejos del Spawn Point (Columna 3) que la pared izquierda, la IA activa un milagro geométrico en gravedades altas: Si el algoritmo dicta alcanzar uno de los dos muros laterales, la computadora oprime la flecha por **`130ms`** continuos. Esto rompe intencionalmente la barrera del DAS del juego (100ms) y obliga forzosamente a TETR.IO a teletransportar la ficha contra la pared (ARR=0), sorteando por pura fuerza bruta los atascos contra la pirámide central y sobreviviendo partidas 20G que humanamente serían letales.
+- **Teletransportación Biomimética (20G Drop Rescue):** Detectando que el pozo derecho de score (Columna 9) está matemáticamente más lejos del Spawn Point (Columna 3) que la pared izquierda, la IA activa un milagro geométrico en gravedades altas: Si el algoritmo dicta alcanzar uno de los dos muros laterales, la computadora oprime la flecha por **`130ms`** continuos. Esto rompe intencionalmente la barrera del DAS del juego y obliga forzosamente a TETR.IO a teletransportar la ficha contra la pared, sorteando por pura fuerza bruta los atascos contra la pirámide central y sobreviviendo partidas 20G que serían letales.
 
 ---
 🎓 **Desarrollado en - Universidad Nacional de Colombia, Sede Bogotá**
