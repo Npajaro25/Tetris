@@ -65,7 +65,7 @@ while True:
                 cv2.imwrite(img_path, full_screen)
                 
                 ambiente.last_evidence_time = time.time()
-                print(f"[DEBUG] Evidencia Nivel Alto/Final guardada: {img_path}")
+                #print(f"[DEBUG] Evidencia Nivel Alto/Final guardada: {img_path}")
 
         if elapsed >= 122: # 120s de Blitz + 2s de gracia (animación inicial)
             print("¡Tiempo límite de TETR.IO Blitz alcanzado! Deteniendo agente.")
