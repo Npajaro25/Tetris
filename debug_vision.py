@@ -71,7 +71,7 @@ def main():
 
     try:
         while True:
-            # Capturamos toda la pantalla o al menos el bounding box de las 3 zonas
+            # Se captura toda la pantalla o al menos el bounding box de las 3 zonas
             min_x = min(monitor_board["left"], monitor_hold["left"], monitor_next["left"])
             min_y = min(monitor_board["top"], monitor_hold["top"], monitor_next["top"])
             max_r = max(monitor_board["left"]+monitor_board["width"], monitor_next["left"]+monitor_next["width"])

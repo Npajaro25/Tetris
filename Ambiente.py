@@ -198,9 +198,6 @@ class Ambiente:
                 s_channel = centro[:, :, 1].flatten()
                 v_channel = centro[:, :, 2].flatten()
                 
-                # Usar la mediana (50%) en vez del p75.
-                # Textos delgados como "60s LEFT" o partículas jamás cubrirán el 50% del centro,
-                # mientras que un bloque sólido cubrirá el 100%.
                 s_med = float(np.median(s_channel))
                 v_med = float(np.median(v_channel))
 

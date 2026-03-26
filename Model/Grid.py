@@ -149,26 +149,29 @@ class Grid:
         
         # 2. SISTEMA DE RECOMPENSAS POR LÍNEAS Y CASTIGO POR HUECOS
         if lines_cleared == 4:
-            # TETRIS: ¡Recompensa masiva!
+            # TETRIS
             score_offensive += 3000
         elif lines_cleared > 0:
-            if max_h < 14:
-                # CASTIGO POR QUEMAR LÍNEAS: Queremos Tetrises.
-                # Debe ser MENOR al castigo por huecos (-500) para que
-                # prefiera quemar línea antes que dejar un hueco.
-                score_offensive -= 100 * lines_cleared
-            else:
-                # MODO PÁNICO: Recompensar limpieza para sobrevivir
-                score_offensive += 500 * lines_cleared
+            # CASTIGO POR QUEMAR LÍNEAS
+            # Debe ser MENOR al castigo por huecos (-500) para que
+            # prefiera quemar línea antes que dejar un hueco.
+            score_offensive -= 100 * lines_cleared
+            
+        # 2.5 PERFECT CLEAR DREAMS (ALL CLEAR)
+        # Si limpiar estas líneas resulta en un tablero matemáticamente vacío:
+        if lines_cleared > 0 and not np.any(new_grid):
+            # El juego da 3500 puntos oficiales.
+            # Si ve un Perfect Clear a 2 piezas de distancia, sacrificará todo por él.
+            score_offensive += 50000
                 
         # 3. MANTENER EL TABLERO SANO Y PLANO PARA TETRISES
         # El rango de altura destruye implacablemente la tendencia natural de la IA
-        # a construir escaleras infinitas en la pared izquierda (el óptimo local codicioso).
+        # a construir escaleras infinitas en la pared izquierda.
         if alturas_0_8:
             rango_altura = max(alturas_0_8) - min(alturas_0_8)
             score_offensive -= 100.0 * rango_altura
             
-        # Castigo BRUTAL (-500) para que NUNCA deje huecos.
+        # Castigo BRUTAL (-500) para que nunca deje huecos.
         score_offensive -= 500 * holes
 
         heuristicas = [score_base, score_offensive]
