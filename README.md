@@ -26,7 +26,7 @@ Dado que el agente lee píxeles brutos de la pantalla, es vital minimizar el "ru
 pip install opencv-python numpy mss pyautogui
 ```
 - **Python 3.10+**
-- **Resolución nativa a 1080p @ 60Hz** (Constricción física vital: La máquina asume pulsaciones de teclado de `30ms` de duración para garantizar que la pantalla, refrescándose a 16.6ms, no deje caer inputs accidentalmente por el Jitter de Windows).
+- **Resolución nativa de 1080p a 60 Hz como mínimo, sin escalado (100 %).** Se valoran frecuencias superiores, pero los monitores por debajo de 60 Hz rompen la lógica de detección de pantalla. *(Restricción física crítica: la máquina asume pulsaciones de teclado de `30 ms` de duración para garantizar que una pantalla con refresco de `16.6 ms` no pierda entradas accidentalmente debido al jitter de Windows).*
 
 ## 🚀 Uso / Calibración Inicial
 
@@ -59,22 +59,22 @@ Tetris/
 ## 🧠 Algoritmos Base y Optimizaciones
 
 ### N-Depth Recursive Beam Search (K=3)
-El motor original revisaba `~1640` tableros para una profundidad de 2 piezas (Pieza Actual + 1 Next). Reemplazado por un motor N-Depth Recursivo con límite topológico:
+El motor pensado inicialmente revisaba `~1640` tableros para una profundidad de 2 piezas (Pieza Actual + 1 Next). Reemplazado por un motor N-Depth Recursivo con límite topológico:
 1. Evalúa las 40 opciones de la pieza en mano.
 2. Filtra dinámicamente el **Top 3 de mejores decisiones (K=3)**.
 3. Ramifica el futuro evaluando las siguientes piezas de la cola (NEXT) *solo* a través de esas 3 ramas maestras cardinales.
-**Resultado:** Se analizan apenas `~520` tableros por frame (Profundidad de 3 piezas), dándole a un PC de ofimática (60Hz) el mismo nivel de inteligencia profunda y un `%75` menos de carga térmica en la CPU.
+**Resultado:** Se analizan apenas `~520` tableros por frame (Profundidad de 3 piezas), dándole a un PC de ofimática (60Hz) el mismo nivel de inteligencia profunda y un `%75` menos de carga en la CPU., pensado para correr en PC de ofimática.
 
 ### "Soft I-Trap" Dinámico
 Para solucionar el histórico bug matemático donde la IA bloqueaba su HOLD eternamente esperando un pozo ideal guardando la pieza `I`:
 Se recompensa lógicamente cualquier estado prospectivo del tablero que termine devolviendo la pieza `I` a la recámara HOLD con **+500 puntos**. Esto induce de manera heurística a la máquina a "guardar mágicamente" el palo largo por instinto para construir Tetrises, pero la libera conductualmente si jugar dicha pieza saca de golpe un Tetris real (+3000 puntos heurísticos) o limpia lo justo para sobrevivir.
 
 ### Muerte Súbita (120s Blitz Timer)
-Al acabar una partida de competición en TETR.IO Blitz (120 segundos temporizados), las animaciones masivas de "TIME UP" y el menú final generan parpadeos erráticos en OpenCV que simulan bloques fantasma. Como método de defensa anti-alucinaciones extremo, `Main.py` incopora una variable centinela de hardware que paraliza las hebras de ejecución tras `122 segundos` contados desde la primera pieza. Esto congela totalmente al bot y te permite capturar inmaculadamente tu puntuación final.
+Al acabar una partida de competición en TETR.IO Blitz (120 segundos temporizados), las animaciones masivas de "TIME UP" y el menú final generan parpadeos erráticos en OpenCV que simulan bloques fantasma. Como método de defensa anti-alucinaciones extremo, `Main.py` incopora una variable centinela de hardware que paraliza las hebras de ejecución tras `122 segundos` contados desde la primera pieza. Esto congela totalmente al bot y te permite capturar la puntuación final.
 
 ### Anti-Ghosting y APM de Alta Frecuencia
 - Un rastreo Flood-Fill en cascada asegurando *8-conectividad* desde el ras de suelo del tablero erradica y limpia a los bloques transitorios de caídas aéreas que corrompen el mapeo 10x20.
-- El límite crudo de velocidad latente del marco virtual (Pacemaker aéreo) fue optimizado empíricamente a **`100ms`**. Esto actúa como el limitador perfecto para sangrar la inercia vertical y exprimir el mayor número de piezas posibles por minuto (APM), logrando el *Time Perfect*: La partida llena el medidor hasta el segundo 120 sobreviviendo magistralmente bajo Gravedad Nivel 11 y maximizando el puntaje final sin estrellarse.
+- El límite bruto de velocidad latente del marco virtual (*pacemaker* aéreo) se optimizó empíricamente en **`100 ms`**. En teoría, este valor funciona como un limitador ideal para disipar la inercia vertical y exprimir la mayor cantidad posible de piezas por minuto (APM), con el objetivo de alcanzar el *Time Perfect*: llenar el medidor hasta el segundo 120, sobrevivir bajo Gravedad Nivel 11 y maximizar el puntaje final sin colapsar. **En la práctica, sin embargo, este comportamiento no siempre se reproduce de forma consistente**; aunque en algunos intentos, con suficiente suerte, incluso puede rozar el nivel 10.
 - Armado con un `press_duration` sincronizado a la tasa de refresco del monitor (30ms), el agente evade el parpadeo de latencia en Windows OS y nunca omite pulsaciones. 
 - **Teletransportación Biomimética (20G Drop Rescue):** Detectando que el pozo derecho de score (Columna 9) está matemáticamente más lejos del Spawn Point (Columna 3) que la pared izquierda, la IA activa un milagro geométrico en gravedades altas: Si el algoritmo dicta alcanzar uno de los dos muros laterales, la computadora oprime la flecha por **`130ms`** continuos. Esto rompe intencionalmente la barrera del DAS del juego y obliga forzosamente a TETR.IO a teletransportar la ficha contra la pared, sorteando por pura fuerza bruta los atascos contra la pirámide central y sobreviviendo partidas 20G que serían letales.
 
