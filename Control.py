@@ -16,29 +16,22 @@ def hrd_sleep(duration):
     while time.perf_counter() - start < duration:
         pass
 
-# Delays ultra-rápidos para compensar el lag inherente de PyAutoGUI en Windows (~15ms por llamada)
-# Esto evita que excedamos el "Lock Delay" (500ms) de TETR.IO en niveles de gravedad máxima
-MOVE_DELAY = 0.002   # 2ms entre movimientos
-ROT_DELAY = 0.005    # 5ms entre rotaciones
-
-# ========== PACEMAKER (Control de APM) ========== #
-# En lugar de pausar el bot DESPUÉS de tirar la ficha, lo pausamos en el aire.
-# Buscando el "Time Perfect 120s": 130ms era muy lento (79k pts) y 80ms es suicida (>Lvl 11 rápido).
-# 100ms es el medio de oro empírico para sangrar el tiempo justo antes del Game Over por gravedad.
-FINAL_DELAY = 0.100  # 100ms pausa antes del drop (Equilibrio de supervivencia perfecto)
-
-HOLD_DELAY = 0.020   # 20ms después de hold
+# Delays precisos para evadir que la pieza caiga antes de llegar a los laterales
+MOVE_DELAY = 0.005   # 5ms entre movimientos laterales (acelerado para compensar el press_duration de 30ms)
+ROT_DELAY = 0.010    # 10ms entre rotaciones
+FINAL_DELAY = 0.020  # 20ms pausa antes del hard drop
+HOLD_DELAY = 0.030   # 30ms después de hold para que TETR.IO procese
 
 def _secure_press(key, press_duration=0.030):
     """
-    Mantener la tecla 30ms asegura registro rápido sin comerse el timer de Lock Delay,
-    mientras cubre 2 frames completos en 60Hz para evitar inputs droppeados.
+    Mantener la tecla 30ms garantiza abarcar ~2 frames de registro en TETR.IO a 60FPS (16.6ms/frame).
+    Es vital para PCs de universidad (60Hz) evitar inputs perdidos ('misdrops').
     """
     pyautogui.keyDown(key)
     hrd_sleep(press_duration)
     pyautogui.keyUp(key)
 
-def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3, width_pieza=1):
+def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3):
     # Primero rotar
     for _ in range(rotaciones):
         _secure_press(ROTATE)
@@ -48,19 +41,18 @@ def ejecutar_movimiento(col_objetivo, rotaciones, spawn_col=3, width_pieza=1):
     desplazamiento = col_objetivo - spawn_col
     tecla = RIGHT if desplazamiento > 0 else LEFT
 
-    if (col_objetivo == 0 and tecla == LEFT) or (col_objetivo == (10 - width_pieza) and tecla == RIGHT):
-        pyautogui.keyDown(tecla)
-        hrd_sleep(0.130) 
-        pyautogui.keyUp(tecla)
-    else:
-        # Movimiento intermedio: Requiere taps precisos porque no hay pared límite
-        for _ in range(abs(desplazamiento)):
-            _secure_press(tecla)
-            hrd_sleep(MOVE_DELAY)
+    for _ in range(abs(desplazamiento)):
+        _secure_press(tecla)
+        hrd_sleep(MOVE_DELAY)
 
     # Pausa mínima antes de drop
     hrd_sleep(FINAL_DELAY)
     _secure_press(DROP)
+    
+    # DELAY VITAL: El "Hard Drop" en TETR.IO genera un flash brillante / onda expansiva.
+    # 0.05s es suficiente para que la pieza se solidifique visualmente.
+    hrd_sleep(0.05)
+
 
 def ejecutar_hold():
     """Presiona la tecla correspondiente para hacer Hold swap."""
